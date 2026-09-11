@@ -71,6 +71,21 @@ export default function ProductsPage() {
   const [formThreshold, setFormThreshold] = useState<number>(20);
   const [formImage, setFormImage] = useState('');
 
+  const handleImageUpload = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please select an image file.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Image too large', description: 'Please use an image smaller than 2 MB.', variant: 'destructive' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setFormImage(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -381,6 +396,11 @@ export default function ProductsPage() {
                 <Label htmlFor="p-thresh">Low Stock Alert Threshold</Label>
                 <Input id="p-thresh" type="number" value={formThreshold || ''} onChange={(e) => setFormThreshold(parseInt(e.target.value) || 0)} />
               </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="p-image">Product Image</Label>
+                <Input id="p-image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+                {formImage && <img src={formImage} alt="Product preview" className="h-20 w-20 rounded-md border object-cover" />}
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -431,6 +451,11 @@ export default function ProductsPage() {
               <div className="space-y-2">
                 <Label htmlFor="edit-p-thresh">Low Stock Threshold</Label>
                 <Input id="edit-p-thresh" type="number" value={formThreshold} onChange={(e) => setFormThreshold(parseInt(e.target.value) || 0)} />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="edit-p-image">Product Image</Label>
+                <Input id="edit-p-image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+                {formImage && <img src={formImage} alt="Product preview" className="h-20 w-20 rounded-md border object-cover" />}
               </div>
             </div>
           </div>

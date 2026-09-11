@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Warehouse, ArrowUpDown, RotateCcw, Plus, AlertTriangle, Loader2 } from 'lucide-react';
+import { Warehouse, ArrowUpDown, RotateCcw, Plus, AlertTriangle, Loader2, DollarSign, Boxes } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { 
@@ -92,6 +92,8 @@ export default function InventoryPage() {
   };
 
   const lowStockProducts = products.filter(p => p.stock <= p.lowStockThreshold);
+  const totalInventoryValue = products.reduce((sum, p) => sum + p.stock * p.priceUSD, 0);
+  const totalUnits = products.reduce((sum, p) => sum + p.stock, 0);
 
   return (
     <div className="space-y-6">
@@ -153,6 +155,18 @@ export default function InventoryPage() {
             </DialogContent>
           </Dialog>
         )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none shadow-sm bg-primary text-primary-foreground">
+          <CardContent className="p-6 flex items-center justify-between"><div><p className="text-xs font-bold uppercase opacity-80">Total Inventory Value</p><p className="text-3xl font-black mt-2">${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p><p className="text-xs mt-2 opacity-80">Based on USD pricing</p></div><DollarSign className="w-9 h-9 opacity-70" /></CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-6 flex items-center justify-between"><div><p className="text-xs font-bold uppercase text-muted-foreground">Total Units in Stock</p><p className="text-3xl font-black mt-2">{totalUnits.toLocaleString()}</p><p className="text-xs mt-2 text-muted-foreground">Across {products.length} products</p></div><Boxes className="w-9 h-9 text-primary/50" /></CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white">
+          <CardContent className="p-6 flex items-center justify-between"><div><p className="text-xs font-bold uppercase text-muted-foreground">Critical Stock Alerts</p><p className="text-3xl font-black mt-2 text-destructive">{lowStockProducts.length}</p><p className="text-xs mt-2 text-muted-foreground">{lowStockProducts.length ? 'Needs attention' : 'Warehouse healthy'}</p></div><AlertTriangle className="w-9 h-9 text-destructive/60" /></CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

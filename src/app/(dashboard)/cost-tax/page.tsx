@@ -38,6 +38,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { jsPDF } from 'jspdf';
 
 export default function CostAndTaxPage() {
   const { 
@@ -67,6 +68,7 @@ export default function CostAndTaxPage() {
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [expenseNotes, setExpenseNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState('lifetime');
 
   // Edit product cost modal in LKR
   const [isEditProductCostOpen, setIsEditProductCostOpen] = useState(false);
@@ -236,6 +238,17 @@ export default function CostAndTaxPage() {
 
   const expenses = costTaxData?.settings.expenses || [];
   const productsCost = costTaxData?.productsCostData || [];
+  const totalCostAndTax = totalCOGS + totalOverhead + totalTax;
+  const generateReport = () => {
+    const pdf = new jsPDF();
+    pdf.setFontSize(18); pdf.text('Cinnamon Lanka Exports - Profit Report', 14, 18);
+    pdf.setFontSize(11); pdf.text(`Period: ${reportPeriod}`, 14, 28);
+    pdf.text(`Total Revenue: Rs. ${totalRev.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, 42);
+    pdf.text(`Total Cost & Tax: Rs. ${totalCostAndTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, 52);
+    pdf.text(`Net Profit: Rs. ${netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, 14, 62);
+    pdf.text('Net Profit = Total Revenue - Total Cost & Tax', 14, 74);
+    pdf.save(`cinnamon-lanka-profit-report-${reportPeriod}.pdf`);
+  };
 
   return (
     <div className="space-y-8">
@@ -253,6 +266,8 @@ export default function CostAndTaxPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Select value={reportPeriod} onValueChange={setReportPeriod}><SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="day">1 Day</SelectItem><SelectItem value="week">1 Week</SelectItem><SelectItem value="month">Monthly</SelectItem><SelectItem value="lifetime">Lifetime</SelectItem></SelectContent></Select>
+          <Button variant="outline" onClick={generateReport}>Download PDF</Button>
           {canEdit && (
             <Button onClick={() => setIsAddExpenseOpen(true)} className="gap-2 shadow-md">
               <Plus className="w-4 h-4" />
@@ -260,6 +275,12 @@ export default function CostAndTaxPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card><CardContent className="p-5"><p className="text-xs font-bold uppercase text-muted-foreground">Total Revenue Tab</p><p className="text-2xl font-black mt-2">Rs. {totalRev.toLocaleString(undefined,{minimumFractionDigits:2})}</p></CardContent></Card>
+        <Card><CardContent className="p-5"><p className="text-xs font-bold uppercase text-muted-foreground">Total Cost & Tax Tab</p><p className="text-2xl font-black mt-2 text-amber-600">Rs. {totalCostAndTax.toLocaleString(undefined,{minimumFractionDigits:2})}</p></CardContent></Card>
+        <Card className="bg-primary text-primary-foreground"><CardContent className="p-5"><p className="text-xs font-bold uppercase opacity-80">Net Profit Tab</p><p className="text-2xl font-black mt-2">Rs. {netProfit.toLocaleString(undefined,{minimumFractionDigits:2})}</p><p className="text-xs mt-2 opacity-80">Revenue − Cost & Tax</p></CardContent></Card>
       </div>
 
       {/* PROFIT & REVENUE CARDS (ALL IN LKR) */}
@@ -530,7 +551,7 @@ export default function CostAndTaxPage() {
                     <TableCell className="text-xs text-muted-foreground">{exp.notes || '-'}</TableCell>
                     <TableCell className="text-right font-black text-xs text-primary">Rs. {amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                     <TableCell className="text-right">
-                      {canEdit && (
+                      {isSuperAdmin && (
                         <Button 
                           variant="ghost" 
                           size="icon" 

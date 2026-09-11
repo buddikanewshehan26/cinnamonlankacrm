@@ -72,6 +72,7 @@ export default function StaffManagementPage() {
     'dashboard.view', 'inventory.view', 'products.view', 'customers.view', 'invoices.view'
   ]);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedAuditIds, setSelectedAuditIds] = useState<string[]>([]);
 
   // Edit Staff Modal State
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -222,6 +223,14 @@ export default function StaffManagementPage() {
         toast({ title: "Error", description: res.error || "Failed to delete staff account.", variant: "destructive" });
       }
     }
+  };
+
+  const toggleAudit = (id: string) => setSelectedAuditIds(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
+  const deleteSelectedAuditLogs = async () => {
+    if (!selectedAuditIds.length || !confirm(`Delete ${selectedAuditIds.length} selected audit log(s)?`)) return;
+    const res = await fetch('/api/audit-logs', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: selectedAuditIds }) });
+    if (res.ok) { setSelectedAuditIds([]); await fetchAuditLogs(); toast({ title: 'Audit logs deleted' }); }
+    else toast({ title: 'Error', description: 'Could not delete selected audit logs.', variant: 'destructive' });
   };
 
   const filteredStaff = staffList.filter(s => {
@@ -501,16 +510,14 @@ export default function StaffManagementPage() {
           <TabsContent value="audit" className="space-y-4">
             <Card className="border-none shadow-sm overflow-hidden">
               <CardHeader className="bg-muted/10 border-b py-4">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <History className="w-4 h-4 text-primary" />
-                  System Audit Trail
-                </CardTitle>
+                <div className="flex items-center justify-between gap-3"><CardTitle className="text-base font-bold flex items-center gap-2"><History className="w-4 h-4 text-primary" />System Audit Trail</CardTitle><Button variant="destructive" size="sm" disabled={!selectedAuditIds.length} onClick={deleteSelectedAuditLogs}><Trash2 className="w-4 h-4 mr-1" />Delete Selected ({selectedAuditIds.length})</Button></div>
                 <CardDescription>Track administrative actions, user logins, and configuration changes.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
-                    <TableRow>
+                  <TableRow>
+                      <TableHead className="w-12"><Checkbox checked={auditLogs.length > 0 && selectedAuditIds.length === auditLogs.length} onCheckedChange={(checked) => setSelectedAuditIds(checked ? auditLogs.map(log => log.id) : [])} /></TableHead>
                       <TableHead>Timestamp</TableHead>
                       <TableHead>Actor</TableHead>
                       <TableHead>Action</TableHead>
@@ -521,6 +528,7 @@ export default function StaffManagementPage() {
                   <TableBody>
                     {auditLogs.map((log) => (
                       <TableRow key={log.id} className="text-xs">
+                        <TableCell><Checkbox checked={selectedAuditIds.includes(log.id)} onCheckedChange={() => toggleAudit(log.id)} /></TableCell>
                         <TableCell className="font-mono text-muted-foreground whitespace-nowrap">
                           {new Date(log.timestamp).toLocaleString()}
                         </TableCell>
@@ -539,7 +547,7 @@ export default function StaffManagementPage() {
                     ))}
                     {auditLogs.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">
+                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
                           No audit log entries recorded yet.
                         </TableCell>
                       </TableRow>

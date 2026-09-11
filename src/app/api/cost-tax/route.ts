@@ -153,6 +153,9 @@ export async function POST(req: Request) {
     }
 
     if (actionType === 'DELETE_EXPENSE') {
+      if (auth.user.role !== 'SUPER_ADMIN' && !auth.user.isSuperAdmin) {
+        return NextResponse.json({ error: 'Only Super Admin can delete expense records.' }, { status: 403 });
+      }
       const { expenseId } = body;
       const exp = db.costTaxSettings.expenses.find(e => e.id === expenseId);
       db.costTaxSettings.expenses = db.costTaxSettings.expenses.filter(e => e.id !== expenseId);
