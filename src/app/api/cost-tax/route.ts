@@ -10,8 +10,9 @@ export async function GET(req: Request) {
   const db = await getDB();
 
   // Exchange multiplier if invoice/price was historically recorded in USD
+  const exchangeRate = db.costTaxSettings.exchangeRateUSDToLKR || 300;
   const toLKR = (val: number, curr?: string) => {
-    if (curr === 'USD') return val * 300;
+    if (curr === 'USD') return val * exchangeRate;
     return val;
   };
 
@@ -88,6 +89,8 @@ export async function GET(req: Request) {
   return NextResponse.json({
     settings: {
       defaultTaxRatePercent: db.costTaxSettings.defaultTaxRatePercent || 5,
+      exchangeRateUSDToLKR: exchangeRate,
+      exchangeRateUpdatedAt: db.costTaxSettings.exchangeRateUpdatedAt || null,
       defaultPackagingCostLKR: defaultPkgLKR,
       defaultShippingCostLKR: defaultShipLKR,
       expenses: formattedExpenses,
@@ -174,7 +177,14 @@ export async function POST(req: Request) {
     }
 
     if (actionType === 'UPDATE_SETTINGS') {
-      const { defaultTaxRatePercent, defaultPackagingCostLKR, defaultShippingCostLKR } = body;
+      if (auth.user.role !== 'SUPER_ADMIN' && !auth.user.isSuperAdmin) {
+        return NextResponse.json({ error: 'Only Super Admin can update exchange-rate settings.' }, { status: 403 });
+      }
+      const { defaultTaxRatePercent, defaultPackagingCostLKR, defaultShippingCostLKR, exchangeRateUSDToLKR } = body;
+      if (exchangeRateUSDToLKR !== undefined && Number(exchangeRateUSDToLKR) > 0) {
+        db.costTaxSettings.exchangeRateUSDToLKR = Number(exchangeRateUSDToLKR);
+        db.costTaxSettings.exchangeRateUpdatedAt = new Date().toISOString();
+      }
       if (defaultTaxRatePercent !== undefined) db.costTaxSettings.defaultTaxRatePercent = Number(defaultTaxRatePercent);
       if (defaultPackagingCostLKR !== undefined) {
         db.costTaxSettings.defaultPackagingCostLKR = Number(defaultPackagingCostLKR);

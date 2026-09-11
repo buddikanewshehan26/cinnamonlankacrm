@@ -101,6 +101,8 @@ export interface ExpenseRecord {
 }
 
 export interface CostTaxSettingsRecord {
+  exchangeRateUSDToLKR?: number;
+  exchangeRateUpdatedAt?: string;
   defaultTaxRatePercent: number;
   defaultPackagingCostUSD: number;
   defaultPackagingCostLKR: number;
@@ -338,6 +340,8 @@ function getInitialDatabase(): CRMDatabase {
       currency: 'LKR',
     },
     costTaxSettings: {
+      exchangeRateUSDToLKR: 300,
+      exchangeRateUpdatedAt: new Date().toISOString(),
       defaultTaxRatePercent: 5.0,
       defaultPackagingCostUSD: 1.50,
       defaultPackagingCostLKR: 450,
@@ -364,8 +368,8 @@ function getInitialDatabase(): CRMDatabase {
   };
 }
 
-const STATE_TABLE = 'crm_app_state';
-const STATE_ID = 'main';
+const STATE_TABLE = 'crm_resources';
+const RESOURCE_KEYS = ['users', 'customers', 'products', 'invoices', 'companySettings', 'costTaxSettings', 'auditLogs'] as const;
 
 function getConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -386,19 +390,22 @@ async function request(path: string, init?: RequestInit) {
 }
 
 export async function getDB(): Promise<CRMDatabase> {
-  const response = await request(`${STATE_TABLE}?id=eq.${STATE_ID}&select=data`);
-  const rows = await response.json() as Array<{ data: CRMDatabase }>;
-  if (rows[0]?.data) return rows[0].data;
+  const response = await request(`${STATE_TABLE}?select=resource_key,data`);
+  const rows = await response.json() as Array<{ resource_key: keyof CRMDatabase; data: unknown }>;
+  if (rows.length) {
+    const initial = getInitialDatabase();
+    return rows.reduce((db, row) => ({ ...db, [row.resource_key]: row.data }), initial) as CRMDatabase;
+  }
   const initial = getInitialDatabase();
   await saveDB(initial);
   return initial;
 }
 
 export async function saveDB(data: CRMDatabase): Promise<void> {
-  await request(`${STATE_TABLE}?on_conflict=id`, {
+  await request(`${STATE_TABLE}?on_conflict=resource_key`, {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ id: STATE_ID, data, updated_at: new Date().toISOString() }),
+    body: JSON.stringify(RESOURCE_KEYS.map(resource_key => ({ resource_key, data: data[resource_key], updated_at: new Date().toISOString() }))),
   });
 }
 

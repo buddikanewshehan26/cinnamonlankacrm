@@ -59,6 +59,7 @@ export default function CostAndTaxPage() {
   const [taxRate, setTaxRate] = useState<number>(5);
   const [defaultPackagingLKR, setDefaultPackagingLKR] = useState<number>(450);
   const [defaultShippingLKR, setDefaultShippingLKR] = useState<number>(1500);
+  const [exchangeRate, setExchangeRate] = useState<number>(300);
 
   // New expense form state in LKR
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -97,6 +98,7 @@ export default function CostAndTaxPage() {
       setTaxRate(costTaxData.settings.defaultTaxRatePercent || 5);
       setDefaultPackagingLKR((costTaxData.settings as any).defaultPackagingCostLKR || 450);
       setDefaultShippingLKR((costTaxData.settings as any).defaultShippingCostLKR || 1500);
+      setExchangeRate((costTaxData.settings as any).exchangeRateUSDToLKR || 300);
     }
   }, [costTaxData]);
 
@@ -123,6 +125,7 @@ export default function CostAndTaxPage() {
           defaultTaxRatePercent: taxRate,
           defaultPackagingCostLKR: defaultPackagingLKR,
           defaultShippingCostLKR: defaultShippingLKR,
+          exchangeRateUSDToLKR: exchangeRate,
         }),
       });
       setIsSaving(false);
@@ -437,6 +440,11 @@ export default function CostAndTaxPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="usd-rate">USD → LKR Exchange Rate (Super Admin)</Label>
+                <Input id="usd-rate" type="number" min="1" value={exchangeRate} onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)} />
+                <p className="text-[11px] text-muted-foreground">Update this rate when the market rate changes. USD-based values will recalculate.</p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="tax-rate" className="text-xs font-bold uppercase tracking-tight flex items-center justify-between">
                   <span>Export Tax / VAT Rate (%)</span>
