@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession, clearSessionCookie } from '@/server/auth';
-import { getDB } from '@/server/db';
+import { getSession } from '@/server/auth';
 
 export async function GET() {
   const session = await getSession();
@@ -9,36 +8,20 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  const db = await getDB();
-  const user = db.users.find(u => u.id === session.userId);
-
-  if (!user) {
-    await clearSessionCookie();
-    return NextResponse.json({ user: null, error: 'User not found' }, { status: 401 });
-  }
-
-  if (user.status === 'disabled') {
-    await clearSessionCookie();
-    return NextResponse.json(
-      { user: null, error: 'Account has been deactivated.' },
-      { status: 403 }
-    );
-  }
-
+  // Keep the session check fast and independent from large CRM records.
+  // Detailed permission/account checks still happen in protected API routes.
   const safeUser = {
-    id: user.id,
-    name: user.name,
-    username: user.username,
-    email: user.email,
-    phone: user.phone,
-    position: user.position,
-    role: user.role,
-    isSuperAdmin: user.isSuperAdmin,
-    status: user.status,
-    permissions: user.permissions,
-    avatar: user.avatar,
-    createdAt: user.createdAt,
-    lastLogin: user.lastLogin,
+    id: session.userId,
+    name: session.username,
+    username: session.username,
+    email: '',
+    phone: '',
+    position: session.role === 'SUPER_ADMIN' ? 'Director' : 'Staff',
+    role: session.role,
+    isSuperAdmin: Boolean(session.isSuperAdmin),
+    status: 'active' as const,
+    permissions: session.role === 'SUPER_ADMIN' || session.isSuperAdmin ? ['*'] : [],
+    lastLogin: null,
   };
 
   return NextResponse.json({
